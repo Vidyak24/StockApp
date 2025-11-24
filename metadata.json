@@ -1,0 +1,5 @@
+{
+  "name": "Stock News Collector",
+  "description": "A financial dashboard to track stocks and automatically aggregate related news from Moneycontrol using Gemini AI.",
+  "requestFramePermissions": []
+}
