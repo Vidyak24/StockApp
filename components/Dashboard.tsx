@@ -16,18 +16,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [newStockSymbol, setNewStockSymbol] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadedStocks = getStoredStocks();
-    setStocks(loadedStocks);
+    loadStocks();
   }, []);
+
+  const loadStocks = async () => {
+    try {
+      const data = await getStoredStocks();
+      setStocks(data);
+    } catch (e) {
+      console.error("Failed to load stocks", e);
+    } finally {
+      setIsInitialLoading(false);
+    }
+  };
 
   const handleAddStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStockSymbol.trim()) return;
 
-    // Check if already exists
+    // Check if already exists (optimistic check)
     if (stocks.some(s => s.symbol.toUpperCase() === newStockSymbol.toUpperCase())) {
       setError("This stock is already in your collection.");
       return;
@@ -42,26 +53,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
       const newStock: Stock = {
         id: crypto.randomUUID(),
         symbol: newStockSymbol.toUpperCase(),
-        name: newStockSymbol.toUpperCase(), // In a real app, we'd fetch the company name
+        name: newStockSymbol.toUpperCase(),
         addedAt: new Date().toISOString(),
         newsSummary: summary,
         sources: sources
       };
 
-      saveStock(newStock);
+      await saveStock(newStock);
+      
+      // Refresh list or optimistic update
       setStocks(prev => [newStock, ...prev]);
       setNewStockSymbol('');
     } catch (err) {
-      setError("Failed to fetch news. Please verify the stock symbol or try again.");
+      console.error(err);
+      setError("Failed to fetch news or save data. Please check connection.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRemoveStock = (id: string) => {
-    removeStock(id);
+  const handleRemoveStock = async (id: string) => {
+    // Optimistic UI update
+    const previousStocks = [...stocks];
     setStocks(prev => prev.filter(s => s.id !== id));
+    
+    try {
+      await removeStock(id);
+    } catch (e) {
+      // Revert on failure
+      setStocks(previousStocks);
+      setError("Failed to delete stock.");
+    }
   };
+
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-emerald-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
