@@ -1,13 +1,20 @@
 import { GoogleGenAI } from "@google/genai";
 import { Source } from "../types";
 
-// Ensure API Key is present
-const apiKey = process.env.API_KEY;
-if (!apiKey) {
-  console.error("Missing API_KEY in environment variables.");
-}
+// Function to retrieve the API key dynamically
+export const getApiKey = (): string | null => {
+  // 1. Check local storage first (User provided key via Settings Modal)
+  if (typeof window !== 'undefined') {
+    const storedKey = localStorage.getItem('GEMINI_API_KEY');
+    if (storedKey) return storedKey;
+  }
 
-const ai = new GoogleGenAI({ apiKey: apiKey || 'DUMMY_KEY_FOR_BUILD' });
+  // 2. Check Environment Variable (Set this in your AWS/Vercel dashboard)
+  // Note: In Vite, this is usually import.meta.env.VITE_API_KEY, but we stick to process.env for compatibility with this setup
+  if (process.env.API_KEY) return process.env.API_KEY;
+
+  return null;
+};
 
 interface StockNewsResult {
   summary: string;
@@ -15,9 +22,15 @@ interface StockNewsResult {
 }
 
 export const fetchStockNews = async (stockSymbol: string): Promise<StockNewsResult> => {
-  if (!apiKey) {
-    throw new Error("API Key is missing. Please configure process.env.API_KEY.");
+  const apiKey = getApiKey();
+
+  if (!apiKey || apiKey === 'DUMMY_KEY_FOR_BUILD') {
+    // This specific error message triggers the Settings Modal in Dashboard.tsx
+    throw new Error("API_KEY_MISSING");
   }
+
+  // Initialize AI instance per request with the current key
+  const ai = new GoogleGenAI({ apiKey });
 
   try {
     // Prompt specifically asks for a short description and uses Moneycontrol as context
@@ -63,6 +76,6 @@ export const fetchStockNews = async (stockSymbol: string): Promise<StockNewsResu
 
   } catch (error) {
     console.error("Error fetching stock news:", error);
-    throw new Error("Failed to fetch news from Gemini.");
+    throw error;
   }
 };

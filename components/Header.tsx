@@ -1,12 +1,13 @@
 import React from 'react';
-import { LogOut, TrendingUp } from 'lucide-react';
+import { LogOut, TrendingUp, Key } from 'lucide-react';
 
 interface HeaderProps {
   onLogout: () => void;
+  onOpenSettings: () => void;
   username: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onLogout, username }) => {
+export const Header: React.FC<HeaderProps> = ({ onLogout, onOpenSettings, username }) => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur supports-[backdrop-filter]:bg-slate-900/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -17,6 +18,17 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, username }) => {
         
         <div className="flex items-center gap-4">
           <span className="text-sm text-slate-400 hidden sm:block">Welcome, {username}</span>
+          
+          <div className="h-6 w-px bg-slate-800 mx-1 hidden sm:block"></div>
+          
+          <button
+            onClick={onOpenSettings}
+            className="p-2 rounded-md hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-colors"
+            title="API Key Settings"
+          >
+            <Key className="h-5 w-5" />
+          </button>
+
           <button
             onClick={onLogout}
             className="p-2 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"

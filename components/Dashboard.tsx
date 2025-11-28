@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Loader2 } from 'lucide-react';
 import { Stock } from '../types';
-import { fetchStockNews } from '../services/geminiService';
+import { fetchStockNews, getApiKey } from '../services/geminiService';
 import { getStoredStocks, saveStock, removeStock } from '../services/storageService';
 import { StockTable } from './StockTable';
 import { Button } from './Button';
 import { Header } from './Header';
+import { ApiKeyModal } from './ApiKeyModal';
 
 interface DashboardProps {
   username: string;
@@ -18,9 +19,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Settings / API Key Modal State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     loadStocks();
+    
+    // Auto-open settings if no key is present in env, local storage, or default
+    if (!getApiKey()) {
+        // Small delay to let UI render
+        setTimeout(() => setIsSettingsOpen(true), 500);
+    }
   }, []);
 
   const loadStocks = async () => {
@@ -64,9 +74,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
       // Refresh list or optimistic update
       setStocks(prev => [newStock, ...prev]);
       setNewStockSymbol('');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Failed to fetch news or save data. Please check connection.");
+      if (err.message === 'API_KEY_MISSING') {
+          setError("API Key is missing. Please configure it in settings.");
+          setIsSettingsOpen(true);
+      } else {
+          setError("Failed to fetch news. Please check your API key and connection.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +111,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
-      <Header onLogout={onLogout} username={username} />
+      <Header 
+        onLogout={onLogout} 
+        username={username} 
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
+      
+      <ApiKeyModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+        onSave={() => setError(null)}
+      />
 
       <main className="flex-1 container mx-auto px-4 py-8">
         {/* Add Stock Section */}
